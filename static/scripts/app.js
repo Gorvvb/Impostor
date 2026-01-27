@@ -1,23 +1,14 @@
-const ws = new WebSocket("ws://localhost:8000/ws");
-
 const nameInput = document.getElementById("nameInput");
 const joinBtn = document.getElementById("joinBtn");
-
 const playersDiv = document.getElementById("players");
 const chatDiv = document.getElementById("chat");
-
 const chatInput = document.getElementById("chatInput");
 const sendBtn = document.getElementById("sendBtn");
 
+// Temp
 const startBtn = document.getElementById("startBtn");
 
-startBtn.onclick = () => {
-  ws.send(JSON.stringify({
-    type: "start_game"
-  }));
-};
-
-
+let ws = null;
 let joined = false;
 
 /* ---------- helpers ---------- */
@@ -47,45 +38,68 @@ function renderPlayers(players) {
   }
 }
 
-/* ---------- websocket ---------- */
+/* ---------- WebSocket ---------- */
 
-ws.onopen = () => {
-  addSystemMessage("Connected to server");
-};
-
-ws.onmessage = (event) => {
-  const msg = JSON.parse(event.data);
-
-  if (msg.type === "lobby_update") {
-    renderPlayers(msg.players);
-    addSystemMessage("Lobby updated");
+function safeSend(data) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(data));
+  } else {
+    addSystemMessage("Not connected yet");
   }
+}
 
-  if (msg.type === "chat") {
-    addChatMessage(msg.from, msg.text);
-  }
+function connect() {
+  const protocol = location.protocol === "https:" ? "wss" : "ws";
+  const wsUrl = `${protocol}://${location.host}/ws`;
 
-  if (msg.type === "system") {
-    addSystemMessage(msg.message);
-  }
+  ws = new WebSocket(wsUrl);
 
-  if (msg.type === "role") {
-    if (msg.role === "impostor") {
-      alert("You are the IMPOSTOR!\nHint: " + msg.hint);
-    } else {
-      alert("You are INNOCENT!\nWord: " + msg.word);
+  ws.onopen = () => {
+    addSystemMessage("Connected to server");
+
+    // Auto-rejoin if already joined
+    if (joined) {
+      safeSend({ type: "join", name: nameInput.value });
     }
-  }
+  };
 
-  if (msg.type === "error") {
-    alert(msg.message);
-  }
-};
+  ws.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
 
+    if (msg.type === "lobby_update") {
+      renderPlayers(msg.players);
+    }
 
-ws.onclose = () => {
-  addSystemMessage("Disconnected from server");
-};
+    if (msg.type === "chat") {
+      addChatMessage(msg.from, msg.text);
+    }
+
+    if (msg.type === "system") {
+      addSystemMessage(msg.message);
+    }
+
+    if (msg.type === "role") {
+      if (msg.role === "impostor") {
+        alert("You are the IMPOSTOR!\nHint: " + msg.hint);
+      } else {
+        alert("You are INNOCENT!\nWord: " + msg.word);
+      }
+    }
+
+    if (msg.type === "error") {
+      alert(msg.message);
+    }
+  };
+
+  ws.onclose = () => {
+    addSystemMessage("Disconnected. Reconnecting...");
+    setTimeout(connect, 2000);
+  };
+
+  ws.onerror = () => {
+    ws.close();
+  };
+}
 
 /* ---------- UI events ---------- */
 
@@ -93,10 +107,7 @@ joinBtn.onclick = () => {
   const name = nameInput.value.trim();
   if (!name || joined) return;
 
-  ws.send(JSON.stringify({
-    type: "join",
-    name
-  }));
+  safeSend({ type: "join", name });
 
   joined = true;
   nameInput.disabled = true;
@@ -116,10 +127,14 @@ function sendChat() {
   const text = chatInput.value.trim();
   if (!text) return;
 
-  ws.send(JSON.stringify({
-    type: "chat",
-    text
-  }));
-
+  safeSend({ type: "chat", text });
   chatInput.value = "";
 }
+
+// Start game button (temp)
+startBtn.onclick = () => {
+  safeSend({ type: "start_game" });
+};
+
+// Connect on load
+connect();
