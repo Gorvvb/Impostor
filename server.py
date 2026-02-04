@@ -7,13 +7,23 @@ import json
 import os
 import re
 
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+
 app = FastAPI()
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount(
+    "/static",
+    StaticFiles(directory=BASE_DIR / "static"),
+    name="static"
+)
+
 
 @app.get("/")
 async def root():
-    return FileResponse("static/index.html")
+    return FileResponse(BASE_DIR / "static" / "index.html")
+
 
 # --- GAME STATE ---
 clients: Dict[WebSocket, str] = {}   # ws -> name
