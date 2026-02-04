@@ -186,7 +186,12 @@ function sendChat() {
 }
 
 sendBtn.onclick = sendChat;
-chatInput.onkeydown = (e) => e.key === "Enter" && sendChat();
+chatInput.onkeydown = (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    sendChat();
+  }
+};
 
 startBtn.onclick = () => {
   safeSend({ type: "start_game" });
