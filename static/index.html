@@ -3,24 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Impostor Lobby</title>
+    <title>🎭 Impostor Game</title>
     <link rel="stylesheet" href="/static/styles/style.css">
 </head>
 <body>
-    <h2>Impostor - Lobby</h2>
-    <div>
-        <input id="nameInput" placeholder="Your name">
-        <button id="joinBtn">Join lobby</button>
+    <h2>🎭 IMPOSTOR GAME 🎭</h2>
+    
+    <div class="controls">
+        <input id="nameInput" placeholder="Enter your name">
+        <button id="joinBtn">Join Lobby</button>
+        <button id="startBtn" disabled>Start Game</button>
     </div>
-    <h3>Players</h3>
-    <div id="players"></div>
-    <h3>Chat</h3>
+    
+    <h3>Players in Lobby</h3>
+    <div id="players">No players yet...</div>
+    
+    <h3>Game Chat</h3>
     <div id="chat"></div>
-
-    <input id="chatInput" placeholder="Type message..." disabled>
-    <button id="sendBtn" disabled>Send</button>
-    <button id="startBtn">Start Game</button>
-
+    
+    <div class="controls">
+        <input id="chatInput" placeholder="Type message or /vote [player]" disabled>
+        <button id="sendBtn" disabled>Send</button>
+    </div>
+    
+    <div style="color: #94a3b8; font-size: 14px; margin-top: 10px; padding: 10px; background: rgba(30, 41, 59, 0.5); border-radius: 8px;">
+        <strong>How to play:</strong> Join with a name, start game with 2+ players. 
+        During discussion, use <code>/vote playername</code> (case-insensitive) to vote. 
+        Commands starting with / are processed silently - no error messages will show.
+    </div>
+    
     <script src="/static/scripts/app.js"></script>
 </body>
 </html>
