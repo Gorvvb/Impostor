@@ -11,10 +11,7 @@ let joined = false;
 let myName = "";
 let currentPhase = "lobby";
 
-/* 🔑 FIX: track currently open role modal */
 let activeRoleModal = null;
-
-/* ---------- helpers ---------- */
 
 function addSystemMessage(text) {
   const el = document.createElement("div");
@@ -42,10 +39,7 @@ function renderPlayers(players) {
   }
 }
 
-/* ---------- ROLE MODAL (FIXED, SAME UI) ---------- */
-
 function showRoleCard(role, data) {
-  /* 🔑 FIX: remove existing modal before creating a new one */
   if (activeRoleModal) {
     activeRoleModal.remove();
     activeRoleModal = null;
@@ -198,7 +192,6 @@ startBtn.onclick = () => {
   startBtn.disabled = true;
 };
 
-/* Show role again button (unchanged behavior, now safe) */
 const roleBtn = document.createElement("button");
 roleBtn.textContent = "Show My Role Again";
 roleBtn.style.marginLeft = "10px";

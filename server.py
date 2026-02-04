@@ -297,7 +297,6 @@ async def websocket_endpoint(ws: WebSocket):
             if name in game_state.get("votes", {}):
                 game_state["votes"].pop(name, None)
 
-            # 🔧 FIX: re-check voting completion after disconnect
             if game_state["status"] == "voting" and len(game_state["votes"]) == len(clients):
                 await end_voting()
 
