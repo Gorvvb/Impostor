@@ -11,6 +11,9 @@ let joined = false;
 let myName = "";
 let currentPhase = "lobby";
 
+/* 🔑 FIX: track currently open role modal */
+let activeRoleModal = null;
+
 /* ---------- helpers ---------- */
 
 function addSystemMessage(text) {
@@ -39,34 +42,49 @@ function renderPlayers(players) {
   }
 }
 
+/* ---------- ROLE MODAL (FIXED, SAME UI) ---------- */
+
 function showRoleCard(role, data) {
+  /* 🔑 FIX: remove existing modal before creating a new one */
+  if (activeRoleModal) {
+    activeRoleModal.remove();
+    activeRoleModal = null;
+  }
+
   const modal = document.createElement("div");
   modal.className = "modal";
-  
+
   const content = document.createElement("div");
   content.className = "modal-content";
-  
+
   content.innerHTML = `
     <h2>${role === "impostor" ? "🎭 YOU ARE THE IMPOSTOR 🎭" : "😇 YOU ARE INNOCENT 😇"}</h2>
     <div class="role-message">
       ${role === "impostor" 
-        ? `You are the <strong>IMPOSTOR</strong>!<br><br>Your hint: <strong>"${data.hint}"</strong><br><br>Pretend to know the word and blend in with the innocent players.` 
-        : `You are <strong>INNOCENT</strong>!<br><br>The word is: <strong>${data.word}</strong><br><br>Find the impostor by discussing with other players.`}
+        ? `You are the <strong>IMPOSTOR</strong>!<br><br>
+           Your hint: <strong>"${data.hint}"</strong><br><br>
+           Pretend to know the word and blend in with the innocent players.` 
+        : `You are <strong>INNOCENT</strong>!<br><br>
+           The word is: <strong>${data.word}</strong><br><br>
+           Find the impostor by discussing with other players.`}
     </div>
     <div class="role-instruction">
       ${role === "impostor" 
         ? "Try to deceive others and avoid being voted out!"
         : "Use /vote [player] to vote out who you think is the impostor!"}
     </div>
-    <button id="closeRoleBtn" class="modal-btn">OK, I'm Ready!</button>
+    <button class="modal-btn">OK, I'm Ready!</button>
   `;
-  
+
+  const closeBtn = content.querySelector("button");
+  closeBtn.onclick = () => {
+    modal.remove();
+    activeRoleModal = null;
+  };
+
   modal.appendChild(content);
   document.body.appendChild(modal);
-  
-  document.getElementById("closeRoleBtn").onclick = () => {
-    modal.remove();
-  };
+  activeRoleModal = modal;
 }
 
 /* ---------- WebSocket ---------- */
@@ -81,9 +99,7 @@ function safeSend(data) {
 
 function connect() {
   const protocol = location.protocol === "https:" ? "wss" : "ws";
-  const wsUrl = `${protocol}://${location.host}/ws`;
-
-  ws = new WebSocket(wsUrl);
+  ws = new WebSocket(`${protocol}://${location.host}/ws`);
 
   ws.onopen = () => {
     addSystemMessage("Connected to server");
@@ -110,16 +126,6 @@ function connect() {
 
     if (msg.type === "role") {
       showRoleCard(msg.role, msg);
-      if (msg.role === "impostor") {
-        addSystemMessage("You are the IMPOSTOR! Your mission is to deceive others.");
-      } else {
-        addSystemMessage(`You are INNOCENT! The word is: ${msg.word}`);
-      }
-    }
-
-    if (msg.type === "error") {
-      // Show errors in chat, not as alerts
-      addSystemMessage(`Error: ${msg.message}`);
     }
 
     if (msg.type === "phase_change") {
@@ -128,20 +134,20 @@ function connect() {
     }
 
     if (msg.type === "vote_update") {
-      // Only show total votes, not who has votes
       addSystemMessage(`Votes cast: ${msg.total_votes}/${msg.required_votes}`);
     }
 
     if (msg.type === "game_result") {
-      // Show results in chat, not as alerts
-      addSystemMessage(`🎮 GAME OVER 🎮`);
+      addSystemMessage("🎮 GAME OVER 🎮");
       addSystemMessage(msg.message);
       addSystemMessage(`The word was: ${msg.word}`);
       addSystemMessage(`Impostor's hint: "${msg.hint}"`);
       currentPhase = "lobby";
-      
-      // Reset start button
       startBtn.disabled = false;
+    }
+
+    if (msg.type === "error") {
+      addSystemMessage(`Error: ${msg.message}`);
     }
   };
 
@@ -150,21 +156,20 @@ function connect() {
     setTimeout(connect, 2000);
   };
 
-  ws.onerror = () => {
-    ws.close();
-  };
+  ws.onerror = () => ws.close();
 }
 
-/* ---------- UI events ---------- */
+/* ---------- UI ---------- */
 
 joinBtn.onclick = () => {
   const name = nameInput.value.trim();
   if (!name || joined) return;
 
   myName = name;
+  joined = true;
+
   safeSend({ type: "join", name });
 
-  joined = true;
   nameInput.disabled = true;
   joinBtn.disabled = true;
   chatInput.disabled = false;
@@ -173,33 +178,22 @@ joinBtn.onclick = () => {
   addSystemMessage(`You joined as ${name}`);
 };
 
-sendBtn.onclick = sendChat;
-chatInput.onkeydown = (e) => {
-  if (e.key === "Enter") sendChat();
-};
-
 function sendChat() {
   const text = chatInput.value.trim();
   if (!text) return;
-
   safeSend({ type: "chat", text });
   chatInput.value = "";
 }
 
+sendBtn.onclick = sendChat;
+chatInput.onkeydown = (e) => e.key === "Enter" && sendChat();
+
 startBtn.onclick = () => {
   safeSend({ type: "start_game" });
   startBtn.disabled = true;
-  setTimeout(() => {
-    if (ws.readyState === WebSocket.OPEN) {
-      startBtn.disabled = false;
-    }
-  }, 2000);
 };
 
-// Connect on load
-connect();
-
-// Add re-show role button
+/* Show role again button (unchanged behavior, now safe) */
 const roleBtn = document.createElement("button");
 roleBtn.textContent = "Show My Role Again";
 roleBtn.style.marginLeft = "10px";
@@ -210,4 +204,6 @@ roleBtn.onclick = () => {
     addSystemMessage("No active game or you haven't joined yet");
   }
 };
-document.querySelector("div").appendChild(roleBtn);
+document.querySelector(".controls").appendChild(roleBtn);
+
+connect();
